@@ -19,3 +19,6 @@ nosetests.xml
 tmp*
 node_modules
 version.py
+env
+htmlcov
+.pytest_cache
