@@ -1,175 +1,170 @@
-import math
 from bitarray import bitarray
 
-class LZ77Compressor:
-	"""
-	A simplified implementation of the LZ77 Compression Algorithm
-	"""
-	MAX_WINDOW_SIZE = 400
 
-	def __init__(self, window_size=20):
-		self.window_size = min(window_size, self.MAX_WINDOW_SIZE) 
-		self.lookahead_buffer_size = 15 # length of match is at most 4 bits
+class LZ77:
+    """
+    A simplified implementation of the LZ77 Compression Algorithm
+    """
 
-	def compress(self, input_file_path, output_file_path=None, verbose=False):
-		"""
-		Given the path of an input file, its content is compressed by applying a simple 
-		LZ77 compression algorithm. 
+    MAX_WINDOW_SIZE = 400
 
-		The compressed format is:
-		0 bit followed by 8 bits (1 byte character) when there are no previous matches
-			within window
-		1 bit followed by 12 bits pointer (distance to the start of the match from the 
-			current position) and 4 bits (length of the match)
-		
-		If a path to the output file is provided, the compressed data is written into 
-		a binary file. Otherwise, it is returned as a bitarray
+    def __init__(self, window_size=20):
+        self.window_size = min(window_size, self.MAX_WINDOW_SIZE)
+        self.lookahead_buffer_size = 15  # length of match is at most 4 bits
 
-		if verbose is enabled, the compression description is printed to standard output
-		"""
-		data = None
-		i = 0
-		output_buffer = bitarray(endian='big')
+    def compress(self, input_file_path, output_file_path=None, verbose=False):
+        """
+        Given the path of an input file, its content is compressed by applying a simple
+        LZ77 compression algorithm.
 
-		# read the input file 
-		try:
-			with open(input_file_path, 'rb') as input_file:
-				data = input_file.read()
-		except IOError:
-			print('Could not open input file ...')
-			raise
+        The compressed format is:
+        0 bit followed by 8 bits (1 byte character) when there are no previous matches
+                within window
+        1 bit followed by 12 bits pointer (distance to the start of the match from the
+                current position) and 4 bits (length of the match)
 
-		while i < len(data):
-			#print(i)
+        If a path to the output file is provided, the compressed data is written into
+        a binary file. Otherwise, it is returned as a bitarray
 
-			match = self.findLongestMatch(data, i)
+        if verbose is enabled, the compression description is printed to standard output
+        """
+        data = None
+        i = 0
+        output_buffer = bitarray(endian="big")
 
-			if match: 
-				# Add 1 bit flag, followed by 12 bit for distance, and 4 bit for the length
-				# of the match 
-				(bestMatchDistance, bestMatchLength) = match
+        # read the input file
+        try:
+            with open(input_file_path, "rb") as input_file:
+                data = input_file.read()
+        except IOError:
+            print("Could not open input file ...")
+            raise
 
-				output_buffer.append(True)
-				output_buffer.frombytes(bytes([bestMatchDistance >> 4]))
-				output_buffer.frombytes(bytes([((bestMatchDistance & 0xf) << 4) | bestMatchLength]))
+        while i < len(data):
+            # print(i)
 
-				if verbose:
-                                        print("<1, %i, %i>" % (bestMatchDistance, bestMatchLength), end='')
+            match = self.findLongestMatch(data, i)
 
-				i += bestMatchLength
+            if match:
+                # Add 1 bit flag, followed by 12 bit for distance, and 4 bit for the length
+                # of the match
+                (bestMatchDistance, bestMatchLength) = match
 
-			else:
-				# No useful match was found. Add 0 bit flag, followed by 8 bit for the character
-				output_buffer.append(False)
-				output_buffer.frombytes(bytes([data[i]]))
-				
-				if verbose:
-					print("<0, %s>" % data[i], end='')
+                output_buffer.append(True)
+                output_buffer.frombytes(bytes([bestMatchDistance >> 4]))
+                output_buffer.frombytes(bytes([((bestMatchDistance & 0xF) << 4) | bestMatchLength]))
 
-				i += 1
+                if verbose:
+                    print("<1, %i, %i>" % (bestMatchDistance, bestMatchLength), end="")
 
-		# fill the buffer with zeros if the number of bits is not a multiple of 8		
-		output_buffer.fill()
+                i += bestMatchLength
 
-		# write the compressed data into a binary file if a path is provided
-		if output_file_path:
-			try:
-				with open(output_file_path, 'wb') as output_file:
-					output_file.write(output_buffer.tobytes())
-					print("File was compressed successfully and saved to output path ...")
-					return None
-			except IOError:
-				print('Could not write to output file path. Please check if the path is correct ...')
-				raise
+            else:
+                # No useful match was found. Add 0 bit flag, followed by 8 bit for the character
+                output_buffer.append(False)
+                output_buffer.frombytes(bytes([data[i]]))
 
-		# an output file path was not provided, return the compressed data
-		return output_buffer
+                if verbose:
+                    print("<0, %s>" % data[i], end="")
 
+                i += 1
 
-	def decompress(self, input_file_path, output_file_path=None):
-		"""
-		Given a string of the compressed file path, the data is decompressed back to its 
-		original form, and written into the output file path if provided. If no output 
-		file path is provided, the decompressed data is returned as a string
-		"""
-		data = bitarray(endian='big')
-		output_buffer = []
+        # fill the buffer with zeros if the number of bits is not a multiple of 8
+        output_buffer.fill()
 
-		# read the input file
-		try:
-			with open(input_file_path, 'rb') as input_file:
-				data.fromfile(input_file)
-		except IOError:
-			print('Could not open input file ...')
-			raise
+        # write the compressed data into a binary file if a path is provided
+        if output_file_path:
+            try:
+                with open(output_file_path, "wb") as output_file:
+                    output_file.write(output_buffer.tobytes())
+                    print("File was compressed successfully and saved to output path ...")
+                    return None
+            except IOError:
+                print("Could not write to output file path. Please check if the path is correct ...")
+                raise
 
-		while len(data) >= 9:
+        # an output file path was not provided, return the compressed data
+        return output_buffer
 
-			flag = data.pop(0)
+    def decompress(self, input_file_path, output_file_path=None):
+        """
+        Given a string of the compressed file path, the data is decompressed back to its
+        original form, and written into the output file path if provided. If no output
+        file path is provided, the decompressed data is returned as a string
+        """
+        data = bitarray(endian="big")
+        output_buffer = []
 
-			if not flag:
-				byte = data[0:8].tobytes()
+        # read the input file
+        try:
+            with open(input_file_path, "rb") as input_file:
+                data.fromfile(input_file)
+        except IOError:
+            print("Could not open input file ...")
+            raise
 
-				output_buffer.append(byte)
-				del data[0:8]
-			else:
-				byte1 = ord(data[0:8].tobytes())
-				byte2 = ord(data[8:16].tobytes())
+        while len(data) >= 9:
 
-				del data[0:16]
-				distance = (byte1 << 4) | (byte2 >> 4)
-				length = (byte2 & 0xf)
+            flag = data.pop(0)
 
-				for i in range(length):
-					output_buffer.append(output_buffer[-distance])
-		out_data =  b''.join(output_buffer)
+            if not flag:
+                byte = data[0:8].tobytes()
 
-		if output_file_path:
-			try:
-				with open(output_file_path, 'wb') as output_file:
-					output_file.write(out_data)
-					print('File was decompressed successfully and saved to output path ...')
-					return None 
-			except IOError:
-				print('Could not write to output file path. Please check if the path is correct ...')
-				raise 
-		return out_data
+                output_buffer.append(byte)
+                del data[0:8]
+            else:
+                byte1 = ord(data[0:8].tobytes())
+                byte2 = ord(data[8:16].tobytes())
 
+                del data[0:16]
+                distance = (byte1 << 4) | (byte2 >> 4)
+                length = byte2 & 0xF
 
-	def findLongestMatch(self, data, current_position):
-		""" 
-		Finds the longest match to a substring starting at the current_position 
-		in the lookahead buffer from the history window
-		"""
-		end_of_buffer = min(current_position + self.lookahead_buffer_size, len(data) + 1)
+                for i in range(length):
+                    output_buffer.append(output_buffer[-distance])
+        out_data = b"".join(output_buffer)
 
-		best_match_distance = -1
-		best_match_length = -1
+        if output_file_path:
+            try:
+                with open(output_file_path, "wb") as output_file:
+                    output_file.write(out_data)
+                    print("File was decompressed successfully and saved to output path ...")
+                    return None
+            except IOError:
+                print("Could not write to output file path. Please check if the path is correct ...")
+                raise
+        return out_data
 
-		# Optimization: Only consider substrings of length 2 and greater, and just 
-		# output any substring of length 1 (8 bits uncompressed is better than 13 bits
-		# for the flag, distance, and length)
-		for j in range(current_position + 2, end_of_buffer):
+    def findLongestMatch(self, data, current_position):
+        """
+        Finds the longest match to a substring starting at the current_position
+        in the lookahead buffer from the history window
+        """
+        end_of_buffer = min(current_position + self.lookahead_buffer_size, len(data) + 1)
 
-			start_index = max(0, current_position - self.window_size)
-			substring = data[current_position:j]
+        best_match_distance = -1
+        best_match_length = -1
 
-			for i in range(start_index, current_position):
+        # Optimization: Only consider substrings of length 2 and greater, and just
+        # output any substring of length 1 (8 bits uncompressed is better than 13 bits
+        # for the flag, distance, and length)
+        for j in range(current_position + 2, end_of_buffer):
 
-				repetitions = len(substring) // (current_position - i)
+            start_index = max(0, current_position - self.window_size)
+            substring = data[current_position:j]
 
-				last = len(substring) % (current_position - i)
+            for i in range(start_index, current_position):
 
-				matched_string = data[i:current_position] * repetitions + data[i:i+last]
+                repetitions = len(substring) // (current_position - i)
 
-				if matched_string == substring and len(substring) > best_match_length:
-					best_match_distance = current_position - i 
-					best_match_length = len(substring)
+                last = len(substring) % (current_position - i)
 
-		if best_match_distance > 0 and best_match_length > 0:
-			return (best_match_distance, best_match_length)
-		return None
+                matched_string = data[i:current_position] * repetitions + data[i : i + last]
 
+                if matched_string == substring and len(substring) > best_match_length:
+                    best_match_distance = current_position - i
+                    best_match_length = len(substring)
 
-
-
+        if best_match_distance > 0 and best_match_length > 0:
+            return (best_match_distance, best_match_length)
+        return None

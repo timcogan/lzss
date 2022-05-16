@@ -1,0 +1,10 @@
+{
+	"venvPath": ".",
+	"venv": "env",
+	"executionEnvironments": [
+		{
+			"root": ".",
+			"extraPaths": []
+		}
+	]
+}

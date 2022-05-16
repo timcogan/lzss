@@ -1,3 +1,3 @@
-# Python LZ77-Compressor
+# Python LZ77 Compressor
 
 This project is based on the GitHub project _manassra/LZ77-Compressor.git_.
