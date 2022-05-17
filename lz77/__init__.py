@@ -1,7 +1,8 @@
-from .lz77 import LZ77
+from .lz77 import compress, decompress
 from .version import __version__
 
 __all__ = [
-    "LZ77",
+    "compress",
+    "decompress",
     "__version__",
 ]
