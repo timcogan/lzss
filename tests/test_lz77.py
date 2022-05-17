@@ -7,31 +7,20 @@ from lz77.lz77 import get_wrapped_slice
 
 
 @pytest.mark.parametrize(
-    "text, expected_compressed_bytes",
+    "data, expected_compressed_bytes",
     [
-        ("a" * 5, 4),  # 9 + 17 = 26 bits, padded to 32
-        ("a" * 16, 4),
-        ("a" * 17, 5),
-        ("abc" * 100, 46),
-        ("abc" * 100 + "random string" + "g" * 10, 63),
+        (b"a" * 5, 4),  # 9 + 17 = 26 bits, padded to 32
+        (b"a" * 16, 4),
+        (b"a" * 17, 5),
+        (b"abc" * 100, 46),
+        (b"abc" * 100 + b"random string" + b"g" * 10, 63),
     ],
 )
-def test_LZ77(tmp_path: Path, text: str, expected_compressed_bytes: int) -> None:
-    input_filename = tmp_path / "raw.txt"
-    intermediate_filename = tmp_path / "compressed.bin"
-    output_filename = tmp_path / "decompressed.txt"
-
-    open(input_filename, "w").write(text)
-
-    compress(input_file_path=input_filename, output_file_path=intermediate_filename)
-
-    num_compressed_bytes = len(open(intermediate_filename, "rb").read())
-    assert num_compressed_bytes < len(text)
-    assert num_compressed_bytes == expected_compressed_bytes
-
-    decompress(intermediate_filename, output_file_path=output_filename)
-
-    assert open(output_filename).read() == text
+def test_LZ77(data: bytes, expected_compressed_bytes: int) -> None:
+    compressed_data = compress(data)
+    assert len(compressed_data) < len(data)
+    assert len(compressed_data) == expected_compressed_bytes
+    assert data == decompress(compressed_data)
 
 
 @pytest.mark.parametrize(
