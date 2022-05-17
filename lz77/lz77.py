@@ -1,16 +1,13 @@
+from typing import Final, Optional, Tuple
+
 from bitarray import bitarray
 
 
 class LZ77:
-    """
-    A simplified implementation of the LZ77 Compression Algorithm
-    """
+    """A simplified implementation of the LZ77 compression algorithm."""
 
-    MAX_WINDOW_SIZE = 400
-
-    def __init__(self, window_size=20):
-        self.window_size = min(window_size, self.MAX_WINDOW_SIZE)
-        self.lookahead_buffer_size = 15  # length of match is at most 4 bits
+    MATCH_LENGTH_MASK: Final[int] = 0xF
+    WINDOW_SIZE: Final[int] = 0xFFF
 
     def compress(self, input_file_path, output_file_path=None, verbose=False):
         """
@@ -41,13 +38,10 @@ class LZ77:
             raise
 
         while i < len(data):
-            # print(i)
-
-            match = self.findLongestMatch(data, i)
+            match = self.find_longest_match(data, i)
 
             if match:
-                # Add 1 bit flag, followed by 12 bit for distance, and 4 bit for the length
-                # of the match
+                # Add 1 bit flag, followed by 12 bit for distance and 4 bit for the match length
                 (bestMatchDistance, bestMatchLength) = match
 
                 output_buffer.append(True)
@@ -135,35 +129,31 @@ class LZ77:
                 raise
         return out_data
 
-    def findLongestMatch(self, data, current_position):
+    @staticmethod
+    def find_longest_match(data: bytes, current_position: int) -> Optional[Tuple[int, int]]:
         """
         Finds the longest match to a substring starting at the current_position
         in the lookahead buffer from the history window
         """
-        end_of_buffer = min(current_position + self.lookahead_buffer_size, len(data))
-
-        best_match_distance = -1
-        best_match_length = -1
+        end_of_buffer = min(current_position + LZ77.MATCH_LENGTH_MASK, len(data))
+        start_index = max(0, current_position - LZ77.WINDOW_SIZE)
 
         # Optimization: Only consider substrings of length 2 and greater, and just
         # output any substring of length 1 (8 bits uncompressed is better than 13 bits
         # for the flag, distance, and length)
-        for j in range(current_position + 2, end_of_buffer + 1):
-
-            start_index = max(0, current_position - self.window_size)
+        for j in range(end_of_buffer, current_position + 3, -1):
             substring = data[current_position:j]
-
             for i in range(start_index, current_position):
+                if substring == get_wrapped_slice(data[i:current_position], len(substring)):
+                    return current_position - i, len(substring)
 
-                repetitions = len(substring) // (current_position - i)
 
-                last = len(substring) % (current_position - i)
-
-                matched_string = data[i:current_position] * repetitions + data[i : i + last]
-
-                if matched_string == substring and len(substring) > best_match_length:
-                    best_match_distance = current_position - i
-                    best_match_length = len(substring)
-
-        if best_match_distance > 0 and best_match_length > 0:
-            return (best_match_distance, best_match_length)
+def get_wrapped_slice(x: bytes, num_bytes: int) -> bytes:
+    """
+    Examples:
+        f(b"1234567", 5) -> b"12345"
+        f(b"123", 5) -> b"12312"
+    """
+    repetitions = num_bytes // len(x)
+    remainder = num_bytes % len(x)
+    return x * repetitions + x[:remainder]
