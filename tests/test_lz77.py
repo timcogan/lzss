@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 
 from lz77 import compress, decompress
