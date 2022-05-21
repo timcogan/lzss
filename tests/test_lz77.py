@@ -8,10 +8,10 @@ from lz77.lz77 import get_wrapped_slice
     "data, expected_compressed_bytes",
     [
         (b"a" * 5, 4),  # 9 + 17 = 26 bits, padded to 32
-        (b"a" * 16, 4),
-        (b"a" * 17, 5),
-        (b"abc" * 100, 46),
-        (b"abc" * 100 + b"random string" + b"g" * 10, 63),
+        (b"a" * 18, 4),
+        (b"a" * 19, 5),
+        (b"abc" * 100, 42),
+        (b"abc" * 100 + b"random string" + b"g" * 10, 59),
     ],
 )
 def test_LZ77(data: bytes, expected_compressed_bytes: int) -> None:
