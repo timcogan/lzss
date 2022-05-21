@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 from util import write_version_info
 
-package_name: Final[str] = "lz77"
+package_name: Final[str] = "lzss"
 
 
 requirements: Final[List[str]] = [

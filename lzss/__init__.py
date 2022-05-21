@@ -1,4 +1,4 @@
-from .lz77 import compress, decompress
+from .lzss import compress, decompress
 from .version import __version__
 
 __all__ = [

@@ -1,7 +1,7 @@
 import pytest
 
-from lz77 import compress, decompress
-from lz77.lz77 import get_wrapped_slice
+from lzss import compress, decompress
+from lzss.lzss import get_wrapped_slice
 
 
 @pytest.mark.parametrize(
@@ -14,7 +14,7 @@ from lz77.lz77 import get_wrapped_slice
         (b"abc" * 100 + b"random string" + b"g" * 10, 59),
     ],
 )
-def test_LZ77(data: bytes, expected_compressed_bytes: int) -> None:
+def test_lzss(data: bytes, expected_compressed_bytes: int) -> None:
     compressed_data = compress(data)
     assert len(compressed_data) < len(data)
     assert len(compressed_data) == expected_compressed_bytes
