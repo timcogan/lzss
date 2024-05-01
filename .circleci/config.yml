@@ -1,0 +1,25 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: circleci/python:3.10-node
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: make init
+      - run:
+          name: Run static type checking
+          command: make types
+      - run:
+          name: Run quality checks
+          command: make quality
+      - run:
+          name: Run tests
+          command: make test
+
+workflows:
+  test:
+    jobs:
+      - test
