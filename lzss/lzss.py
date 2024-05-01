@@ -2,6 +2,7 @@ from typing import Final, Optional, Tuple
 
 from bitarray import bitarray
 
+
 MATCH_LENGTH_MASK: Final[int] = 0xF
 WINDOW_SIZE: Final[int] = 0xFFF
 IS_MATCH_BIT: Final[bool] = True
@@ -15,19 +16,18 @@ LENGTH_OFFSET: Final[int] = 2
 
 def compress(data: bytes) -> bytes:
     output_buffer = bitarray(endian="big")
-    output_buffer.fromlist = lambda x: output_buffer.frombytes(bytes(x))
 
     i = 0
     while i < len(data):
         if match := find_longest_match(data, i):
             match_distance, match_length = match
             output_buffer.append(IS_MATCH_BIT)
-            dist_hi, dist_lo = match_distance >> 4, (match_distance) & 0xF
-            output_buffer.fromlist([dist_hi, (dist_lo << 4) | (match_length - LENGTH_OFFSET)])
+            dist_hi, dist_lo = match_distance >> 4, match_distance & 0xF
+            output_buffer.frombytes(bytes([dist_hi, (dist_lo << 4) | (match_length - LENGTH_OFFSET)]))
             i += match_length
         else:
             output_buffer.append(not IS_MATCH_BIT)
-            output_buffer.fromlist([data[i]])
+            output_buffer.frombytes(bytes([data[i]]))
             i += 1
 
     output_buffer.fill()  # Pad to complete last byte
