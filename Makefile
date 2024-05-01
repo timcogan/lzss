@@ -1,28 +1,23 @@
-PY_VER=python3.10
-PY_VER_SHORT=py$(shell echo $(PY_VER) | sed 's/[^0-9]*//g')
-VENV=env
-PYTHON=$(VENV)/bin/python3
-COVERAGE=$(VENV)/bin/coverage
-PACKAGE_NAME=lzss
-TEST_FOLDER=tests
-CODE_DIRS=$(PACKAGE_NAME) $(TEST_FOLDER) util.py setup.py
+PYTHON=pdm run python
+PROJECT=lzss
 LINE_LEN=120
+CODE_DIRS=$(PROJECT) tests
 
 
-test: $(VENV)
-	$(COVERAGE) run --source $(PACKAGE_NAME) -m pytest $(TEST_FOLDER) $(CIRCLECI_TEST_FLAGS) -s
+test:
+	$(PYTHON) -m coverage run --source $(PROJECT) -m pytest tests -s
 
 
-style: $(VENV)
-	$(PYTHON) -m autoflake -r -i --remove-all-unused-imports --remove-unused-variables $(CODE_DIRS)
-	$(PYTHON) -m isort $(CODE_DIRS) --line-length $(LINE_LEN) 
-	$(PYTHON) -m autopep8 -a -r -i --max-line-length=$(LINE_LEN) $(CODE_DIRS) 
-	$(PYTHON) -m black --line-length $(LINE_LEN) --target-version $(PY_VER_SHORT) $(CODE_DIRS)
+style:
+	$(PYTHON) -m autoflake -r -i $(CODE_DIRS)
+	$(PYTHON) -m isort $(CODE_DIRS)
+	$(PYTHON) -m autopep8 -a -r -i $(CODE_DIRS)
+	$(PYTHON) -m black $(CODE_DIRS)
 
 
-quality: $(VENV)
-	$(PYTHON) -m black --check --line-length $(LINE_LEN) --target-version $(PY_VER_SHORT) $(CODE_DIRS)
-	$(PYTHON) -m flake8 --max-line-length $(LINE_LEN) $(CODE_DIRS) 
+quality:
+	$(PYTHON) -m black --check $(CODE_DIRS)
+	$(PYTHON) -m flake8 --max-doc-length $(LINE_LEN) --max-line-length $(LINE_LEN) $(CODE_DIRS)
 
 
 node_modules:
@@ -30,13 +25,13 @@ node_modules:
 
 
 types: node_modules
-	npx --no-install pyright $(CODE_DIRS) -p pyrightconfig.json
+	pdm run npx --no-install pyright tests $(CODE_DIRS)
 
 
 coverage:
 	$(MAKE) test
 	for command in xml report html ; do \
-		$(COVERAGE) $$command --omit=$(PACKAGE_NAME)/version.py ; \
+		$(PYTHON) -m coverage $$command --omit=$(PACKAGE_NAME)/version.py ; \
 	done
 
 
@@ -47,16 +42,18 @@ check:
 	$(MAKE) coverage
 
 
-$(VENV):
-	git submodule update --init --recursive
-	python3 -m virtualenv -p $(PY_VER) $(VENV)
-	$(PYTHON) -m pip install --upgrade pip==20.0.2
-	$(PYTHON) -m pip install wheel
-	$(PYTHON) -m pip install -r requirements.txt
+pdm.lock:
+	$(MAKE) update
 
 
-init:
-	$(MAKE) $(VENV)
+update:
+	pdm install -d
+
+
+init: pdm.lock
+	which pdm || pip install --user pdm
+	pdm venv create -n $(PROJECT)
+	pdm sync -d
 
 
 clean:
@@ -65,8 +62,16 @@ clean:
 		env \
 		*.egg-info \
 		__pycache__
+	pdm venv remove -y $(PROJECT)
+	rm -f .pdm-python
 
 
 reset:
 	$(MAKE) clean
+	$(MAKE) init
 	$(MAKE) check
+
+
+pypi:
+	$(PYTHON) -m build
+	$(PYTHON) -m twine upload dist/*
